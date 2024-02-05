@@ -1,5 +1,6 @@
 # BasicEpubViewer
 An android app in java which is a simple viewer for epub files, based on epublib
+<<<<<<< HEAD
 
 The library epublib (https://github.com/psiegman/epublib) allows to parse an epub file and use its contents. 
 I have written a simple epub viewer, using this library, which demonstrates how it
@@ -23,3 +24,5 @@ The app does not:
 
 You may use this code as inspiration or as a basis for your own epub viewer.
 It took me a few days to figure all of this out, and I would have liked to have something like this Viewer to guide me through.
+=======
+>>>>>>> 3fff251 (Initial commit)
