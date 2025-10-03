@@ -71,7 +71,7 @@ public class BookViewActivity extends AppCompatActivity {
                 Toast.makeText(getApplicationContext(), "Failure: Need permission to read External Storage", Toast.LENGTH_LONG).show();
             }
             else {
-                File internalStorage = Environment.getExternalStorageDirectory();
+                File internalStorage = getApplicationContext().getExternalFilesDir(null);
                 File booksDir = new File(internalStorage, "Books");
                 File[] allEpubFiles = booksDir.listFiles(new FilenameFilter() {
                     public boolean accept(File dir, String name) {

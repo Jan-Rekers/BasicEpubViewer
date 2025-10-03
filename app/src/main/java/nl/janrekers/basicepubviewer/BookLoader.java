@@ -25,7 +25,7 @@ public class BookLoader extends Worker {
     public Result doWork() {
         String filename = getInputData().getString("FILENAME");
         try {
-            File booksDir = new File(Environment.getExternalStorageDirectory(), "Books");
+            File booksDir = new File(getApplicationContext().getExternalFilesDir(null), "Books");
             File epubFile = new File(booksDir, filename);
             Book book = new EpubReader().readEpub(Files.newInputStream(epubFile.toPath()));
             BookKeeper.getInstance().loadBook(book);
