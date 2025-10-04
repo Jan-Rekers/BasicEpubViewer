@@ -8,6 +8,10 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.provider.Settings;
 import android.view.View;
+import android.webkit.JsResult;
+import android.webkit.WebChromeClient;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.ArrayAdapter;
 import android.widget.Toast;
 
@@ -33,16 +37,18 @@ import nl.janrekers.basicepubviewer.databinding.ActivityBookViewBinding;
 import nl.siegmann.epublib.domain.Book;
 import nl.siegmann.epublib.domain.Resource;
 
-public class BookViewActivity extends AppCompatActivity {
+public class BookViewActivity extends AppCompatActivity implements ChapterMover {
 
     private ActivityBookViewBinding binding;
+    private HorizontalWebView wv;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         binding = ActivityBookViewBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
-        binding.webviewBook.getSettings().setBuiltInZoomControls(true);
+
+        injectJavascriptIntoWebview();
 
         checkPermissions();
 
@@ -56,13 +62,13 @@ public class BookViewActivity extends AppCompatActivity {
 
         binding.btnPrev.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
-                movePage(-1);
+                loadNextOrPrevChapter(-1);
             }
         });
 
         binding.btnNext.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
-                movePage(+1);
+                loadNextOrPrevChapter(+1);
             }
         });
 
@@ -89,11 +95,57 @@ public class BookViewActivity extends AppCompatActivity {
 
     }
 
+    private void injectJavascriptIntoWebview() {
+        wv = binding.webviewBook;
+        wv.getSettings().setBuiltInZoomControls(false);
+        wv.getSettings().setDisplayZoomControls(false);
+        wv.getSettings().setSupportZoom(false);
+        wv.getSettings().setDefaultFontSize(18);
+        wv.setChapterMover(this);
+
+        WebView.setWebContentsDebuggingEnabled(true);
+        wv.getSettings().setJavaScriptEnabled(true);
+        wv.setWebViewClient(new WebViewClient() {
+            public void onPageFinished(WebView view, String url) {
+                    injectJavascript();
+                }
+        });
+        wv.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onJsAlert(WebView view, String url, String message, JsResult result) {
+                int pageCount = Integer.parseInt(message);
+                wv.setPageCount(pageCount);
+                result.confirm();
+                return true;
+            }
+        });
+
+    }
+
+    private void injectJavascript() {
+        String js = "function initialize(){\n" +
+                "    var d = document.getElementsByTagName('body')[0];\n" +
+                "    var ourH = window.innerHeight;\n" +
+                "    var ourW = window.innerWidth;\n" +
+                "    var fullH = d.offsetHeight;\n" +
+                "    var pageCount = Math.floor(fullH/ourH)+1;\n" +
+                "    var currentPage = 0;\n" +
+                "    var newW = pageCount*ourW;\n" +
+                "    d.style.height = ourH+'px';\n" +
+                "    d.style.width = newW+'px';\n" +
+                "    d.style.margin = 0;\n" +
+                "    d.style.webkitColumnCount = pageCount;\n" +
+                "    return pageCount;\n" +
+                "}";
+        wv.loadUrl("javascript:" + js);
+        wv.loadUrl("javascript:alert(initialize())");
+    }
+
 
     // based on the current resId, ask the book for the next resId
     // it depends on the epub whether this is a page or an entire section
     // this is determined by the SPINE of the book
-    private void movePage(int dir) {
+    public void loadNextOrPrevChapter(int dir) {
         if (BookKeeper.getInstance().isBookIsAvailable()) {
             Book book = BookKeeper.getInstance().getBook();
             Resource curResource = book.getResources().getById(BookKeeper.getInstance().getCurrentResourceId());
@@ -104,6 +156,9 @@ public class BookViewActivity extends AppCompatActivity {
                     BookKeeper.getInstance().setCurrentResourceId(nextResource.getId());
                     showPage();
                 }
+            }
+            if (dir < 0) {
+                binding.webviewBook.moveToLastPage();
             }
         }
     }
